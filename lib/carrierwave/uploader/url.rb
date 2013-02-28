@@ -11,14 +11,18 @@ module CarrierWave
       #
       # [String] the location where this file is accessible via a url
       #
-      def url
-        if file.respond_to?(:url) and not file.url.blank?
-          file.url
-        elsif current_path
-          (base_path || "") + File.expand_path(current_path).gsub(File.expand_path(root), '')
-        end
-      end
+      def url(options = {})
+        url =
+          if file.respond_to?(:url) and not file.url.blank?
+            file.method(:url).arity == 0 ? file.url : file.url(options)
+          elsif file.respond_to?(:path)
+            path = file.path.gsub(File.expand_path(root), '')
 
+            (base_path || "") + path
+          end
+
+        uri_encode_url(url)
+      end
       alias_method :to_s, :url
 
       ##
@@ -40,6 +44,32 @@ module CarrierWave
       # [nil]
       #
       def to_xml(options = nil)
+      end
+
+    private
+
+      def uri_encode_url(url)
+        if url = URI.parse(url)
+          url.path = uri_encode_path(url.path)
+          url.to_s
+        end
+      rescue URI::InvalidURIError
+        nil
+      end
+
+      def uri_encode_path(path)
+        # based on Ruby < 2.0's URI.encode
+        safe_string = URI::REGEXP::PATTERN::UNRESERVED + '\/'
+        unsafe = Regexp.new("[^#{safe_string}]", false)
+
+        path.gsub(unsafe) do
+          us = $&
+          tmp = ''
+          us.each_byte do |uc|
+            tmp << sprintf('%%%02X', uc)
+          end
+          tmp
+        end
       end
 
     end # Url
