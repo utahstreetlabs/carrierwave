@@ -1,3 +1,3 @@
 module CarrierWave
-  VERSION = "0.5.8.copious.1"
+  VERSION = "0.5.8.copious.2"
 end
