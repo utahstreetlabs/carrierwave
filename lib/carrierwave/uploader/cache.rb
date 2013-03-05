@@ -76,6 +76,19 @@ module CarrierWave
         cache! sanitized
       end
 
+      def sanitized_file
+        _content = file.read
+        if _content.is_a?(File) # could be if storage is Fog
+          sanitized = CarrierWave::Storage::Fog.new(self).retrieve!(File.basename(_content.path))
+          sanitized.read if sanitized.exists?
+
+        else
+          sanitized = SanitizedFile.new :tempfile => StringIO.new(file.read),
+            :filename => File.basename(path), :content_type => file.content_type
+        end
+        sanitized
+      end
+
       ##
       # Returns a String which uniquely identifies the currently cached file for later retrieval
       #
@@ -90,9 +103,9 @@ module CarrierWave
       ##
       # Caches the given file. Calls process! to trigger any process callbacks.
       #
-      # By default, cache!() uses copy_to(), which operates by copying the file 
-      # to the cache, then deleting the original file.  If move_to_cache() is 
-      # overriden to return true, then cache!() uses move_to(), which simply 
+      # By default, cache!() uses copy_to(), which operates by copying the file
+      # to the cache, then deleting the original file.  If move_to_cache() is
+      # overriden to return true, then cache!() uses move_to(), which simply
       # moves the file to the cache.  Useful for large files.
       #
       # === Parameters
@@ -103,7 +116,7 @@ module CarrierWave
       #
       # [CarrierWave::FormNotMultipart] if the assigned parameter is a string
       #
-      def cache!(new_file)
+      def cache!(new_file = sanitized_file)
         new_file = CarrierWave::SanitizedFile.new(new_file)
 
         unless new_file.empty?
